@@ -120,7 +120,7 @@ def song_title_counts
     tracks.song
   HAVING
     COUNT(DISTINCT tracks.album) > 2
-  
+
   SQL
 end
 
@@ -154,7 +154,7 @@ def top_track_counts
   GROUP BY
     albums.title
   ORDER BY
-    COUNT(*) DESC
+    COUNT(*) DESC, albums.title DESC
   LIMIT
     10
   SQL
@@ -165,12 +165,15 @@ def rock_superstars
   # number of albums. HINT: use LIKE '%Rock%' in your query.
   execute(<<-SQL)
   SELECT
-    albums.artist, COUNT(*)
+    albums.artist, COUNT(DISTINCT albums.asin)
   FROM
     tracks
   JOIN albums ON tracks.album = albums.asin
   JOIN styles ON styles.album = albums.asin
-  
+  WHERE styles.style LIKE '%Rock%'
+  GROUP BY albums.artist
+  ORDER BY COUNT(DISTINCT albums.asin) DESC
+  LIMIT 1
   SQL
 end
 
@@ -183,5 +186,16 @@ def expensive_tastes
   # subquery. Next, JOIN the styles table to this result and use aggregates to
   # determine the average price per track.
   execute(<<-SQL)
+  SELECT styles.style, AVG(track_albums.price)
+  FROM styles
+  JOIN (
+    SELECT albums.asin, albums.price, COUNT(*) AS num_tracks
+    FROM albums
+    JOIN tracks ON albums.asin = tracks.album
+    GROUP BY albums.asin
+  ) AS track_albums ON styles.album = track_albums.asin
+  GROUP BY styles.style
+  ORDER BY AVG(track_albums.price) DESC
+  LIMIT 5
   SQL
 end
